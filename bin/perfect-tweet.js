@@ -12,9 +12,14 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import { loadConfig, saveConfig, resetConfig, validatePatch, applyTheme, describeConfig, CONFIG_PATH } from '../lib/config.js';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { loadConfig, saveConfig, resetConfig, validatePatch, applyTheme, describeConfig, CONFIG_PATH, CONFIG_DIR } from '../lib/config.js';
 import { renderCardHTML, DEFAULT_TWEET, DEFAULT_TEMPLATE, DIMENSIONS } from '../lib/render.js';
 import { extractTweetIds, fetchTweets, applyStatsOverride } from '../lib/fetch.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UI_DIR = path.join(__dirname, '..', 'ui');
 
 // Puppeteer 体积大，仅在真正需要渲染时动态加载（config 等命令不依赖它）
 async function getScreenshotBatch() {
@@ -36,6 +41,7 @@ const USAGE = `perfect-tweet — X 推文卡片批量生成器
   perfect-tweet config --reset               恢复默认模板
   perfect-tweet generate <链接...>           批量生成卡片（支持多链接混排一段文本）
   perfect-tweet preview                      用示例推文按当前模板渲染预览图
+  perfect-tweet ui                           启动可视化配置界面（推荐首次使用）
 
 generate 选项：
   --out DIR            输出目录（默认取配置 outputDir）
@@ -51,6 +57,7 @@ config 常用字段：
   cardOffsetX cardOffsetY outputDir scale timeZone
 
 示例：
+  perfect-tweet ui                           # 打开可视化配置界面
   perfect-tweet config dimension=2:3 fontScale=120 showTranslate=true
   perfect-tweet config bgImage=~/Pictures/bg.jpg cardOpacity=85
   perfect-tweet generate https://x.com/user/status/123 https://x.com/other/status/456
@@ -223,6 +230,317 @@ async function cmdPreview(args) {
     console.log('\n' + describeConfig(config));
 }
 
+/** 启动可视化配置 Web UI */
+async function cmdUI(args) {
+    const PORT = 3456;
+    const HOST = '127.0.0.1';
+
+    // 读取 index.html
+    let indexHtml;
+    try {
+        indexHtml = fs.readFileSync(path.join(UI_DIR, 'index.html'), 'utf8');
+    } catch (e) {
+        console.error('❌ 找不到 UI 文件：' + path.join(UI_DIR, 'index.html'));
+        console.error('   请确保 skill/ui/index.html 已正确安装');
+        process.exit(1);
+    }
+
+    // ===== Puppeteer 浏览器复用（性能优化） =====
+    let browserInstance = null;
+    let browserClosing = false;
+
+    async function getBrowser() {
+        if (browserClosing) {
+            // 等待关闭完成
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return getBrowser();
+        }
+        if (!browserInstance) {
+            browserInstance = await puppeteer.launch({
+                headless: 'new',
+                executablePath: resolveExecutable(),
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            console.log('[UI] Puppeteer 浏览器已启动（复用实例）');
+        }
+        return browserInstance;
+    }
+
+    async function closeBrowser() {
+        if (browserInstance && !browserClosing) {
+            browserClosing = true;
+            try {
+                await browserInstance.close();
+                console.log('[UI] Puppeteer 浏览器已关闭');
+            } catch (e) {
+                console.error('[UI] 关闭浏览器失败:', e.message);
+            }
+            browserInstance = null;
+            browserClosing = false;
+        }
+    }
+
+    const server = http.createServer(async (req, res) => {
+        const url = new URL(req.url, `http://${req.headers.host}`);
+
+        // CORS（本地开发用）
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+        if (req.method === 'OPTIONS') {
+            res.writeHead(204);
+            res.end();
+            return;
+        }
+
+        // ===== 静态文件 =====
+        if (req.method === 'GET' && url.pathname === '/') {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(indexHtml);
+            return;
+        }
+
+        // ===== API: 读取配置 =====
+        if (req.method === 'GET' && url.pathname === '/api/config') {
+            const config = loadConfig();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(config));
+            return;
+        }
+
+        // ===== API: 保存配置 =====
+        if (req.method === 'POST' && url.pathname === '/api/config') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                try {
+                    const patch = JSON.parse(body);
+                    const { ok, patch: clean, errors } = validatePatch(patch);
+                    if (!ok) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: errors.join('; ') }));
+                        return;
+                    }
+                    const current = loadConfig();
+                    applyTheme(clean, current);
+                    const next = { ...current, ...clean };
+                    if (next.bgImage && next.bgImage.startsWith('~')) {
+                        next.bgImage = expandTilde(next.bgImage);
+                    }
+                    saveConfig(next);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true, path: CONFIG_PATH }));
+                } catch (e) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: e.message }));
+                }
+            });
+            return;
+        }
+
+        // ===== API: 重置配置 =====
+        if (req.method === 'POST' && url.pathname === '/api/reset') {
+            const config = resetConfig();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(config));
+            return;
+        }
+
+        // ===== API: 生成预览图 =====
+        if (req.method === 'POST' && url.pathname === '/api/preview') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                try {
+                    const config = JSON.parse(body);
+                    const tweet = DEFAULT_TWEET();
+                    const html = renderCardHTML(tweet, config);
+
+                    // 使用复用的浏览器实例（性能优化）
+                    const browser = await getBrowser();
+                    const page = await browser.newPage();
+                    await page.setViewport({
+                        width: Math.round(DIMENSIONS[config.dimension]?.height * (DIMENSIONS[config.dimension]?.aspect || 9/16) * 2),
+                        height: Math.round(DIMENSIONS[config.dimension]?.height * 2) || 1500,
+                        deviceScaleFactor: 1
+                    });
+                    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+                    await waitAssets(page);
+                    const pngBuffer = await page.screenshot({ type: 'png', fullPage: true });
+                    await page.close(); // 只关闭 page，不关闭 browser
+
+                    res.writeHead(200, { 'Content-Type': 'image/png' });
+                    res.end(pngBuffer);
+                } catch (e) {
+                    console.error('[UI] 预览渲染失败:', e);
+                    res.writeHead(500, { 'Content-Type': 'text/plain' });
+                    res.end('预览渲染失败: ' + e.message);
+                }
+            });
+            return;
+        }
+
+        // ===== API: 上传背景图 =====
+        if (req.method === 'POST' && url.pathname === '/api/upload-bg') {
+            // 使用 busboy 健壮解析 multipart/form-data
+            let busboy;
+            try {
+                busboy = (await import('busboy')).default;
+            } catch (e) {
+                if (e.code === 'ERR_MODULE_NOT_FOUND') {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: '缺少 busboy 依赖。请执行：npm install' }));
+                    return;
+                }
+                throw e;
+            }
+
+            const bb = busboy({ headers: req.headers });
+            let savedPath = null;
+            let errorMsg = null;
+
+            bb.on('file', (name, file, info) => {
+                const { filename, mimeType } = info;
+                if (!filename) {
+                    errorMsg = '未找到文件名';
+                    return;
+                }
+                // 验证 MIME 类型
+                if (!mimeType.startsWith('image/')) {
+                    errorMsg = `不支持的文件类型：${mimeType}，仅支持图片`;
+                    file.resume(); // 丢弃内容
+                    return;
+                }
+                const ext = path.extname(filename) || '.png';
+                const saveName = 'bg-' + Date.now() + ext;
+                const savePath = path.join(CONFIG_DIR, saveName);
+
+                fs.mkdirSync(CONFIG_DIR, { recursive: true });
+                const writeStream = fs.createWriteStream(savePath);
+                file.pipe(writeStream);
+
+                writeStream.on('finish', () => {
+                    savedPath = savePath;
+                });
+                writeStream.on('error', (err) => {
+                    errorMsg = '文件写入失败: ' + err.message;
+                });
+            });
+
+            bb.on('error', (err) => {
+                errorMsg = '解析上传失败: ' + err.message;
+            });
+
+            bb.on('finish', () => {
+                if (errorMsg) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: errorMsg }));
+                } else if (savedPath) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true, path: savedPath }));
+                } else {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: '未收到文件' }));
+                }
+            });
+
+            req.pipe(bb);
+            return;
+        }
+
+        // ===== API: 返回背景图文件 =====
+        if (req.method === 'GET' && url.pathname === '/api/bg-image') {
+            const config = loadConfig();
+            if (!config.bgImage || !fs.existsSync(config.bgImage)) {
+                res.writeHead(404);
+                res.end('背景图不存在');
+                return;
+            }
+            const ext = path.extname(config.bgImage).toLowerCase();
+            const mime = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'application/octet-stream';
+            const stream = fs.createReadStream(config.bgImage);
+            res.writeHead(200, { 'Content-Type': mime });
+            stream.pipe(res);
+            return;
+        }
+
+        // 404
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+    });
+
+    server.listen(PORT, HOST, async () => {
+        const url = `http://${HOST}:${PORT}`;
+        console.log(`\n🚀 Perfect Tweet 可视化配置界面已启动\n`);
+        console.log(`   访问地址: ${url}`);
+        console.log(`   配置文件: ${CONFIG_PATH}\n`);
+        console.log(`   按 Ctrl+C 停止服务器\n`);
+
+        // 自动打开浏览器（跨平台）
+        const { exec } = await import('node:child_process');
+        const openCmd = {
+            darwin: `open ${url}`,
+            win32: `start ${url}`,
+            linux: `xdg-open ${url}`
+        }[process.platform] || `open ${url}`;
+
+        exec(openCmd, (err) => {
+            if (err) {
+                console.log(`   请手动在浏览器中打开: ${url}\n`);
+            }
+        });
+    });
+
+    // 优雅退出
+    process.on('SIGINT', () => {
+        console.log('\n👋 服务器已停止');
+        server.close();
+        process.exit(0);
+    });
+}
+
+/** 辅助函数：解析 Chrome 可执行文件（供 cmdUI 使用） */
+async function resolveExecutable() {
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        const env = process.env.PUPPETEER_EXECUTABLE_PATH;
+        if (fs.existsSync(env)) return env;
+    }
+    try {
+        const p = (await import('puppeteer')).executablePath();
+        if (fs.existsSync(p)) {
+            const stat = fs.statSync(p);
+            // Puppeteer 23+ 使用 Chrome for Testing，文件较小但完整
+            if (stat.size > 100 * 1024) return p; // >100KB 即可
+        }
+    } catch {}
+    const systemPaths = [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+    ];
+    for (const p of systemPaths) {
+        if (fs.existsSync(p)) return p;
+    }
+    throw new Error('未找到 Chrome/Chromium');
+}
+
+/** 辅助函数：等待资源加载（供 cmdUI 使用） */
+async function waitAssets(page) {
+    await page.evaluate(() => {
+        return new Promise(resolve => {
+            if (document.readyState === 'complete') {
+                setTimeout(resolve, 300);
+            } else {
+                window.addEventListener('load', () => setTimeout(resolve, 300));
+            }
+        });
+    });
+}
+
 /* ---------- 入口 ---------- */
 
 async function main() {
@@ -232,6 +550,7 @@ async function main() {
         case 'config': await cmdConfig(rest); break;
         case 'generate': case 'gen': await cmdGenerate(rest); break;
         case 'preview': await cmdPreview(rest); break;
+        case 'ui': case 'web': await cmdUI(rest); break;
         case 'help': case '--help': case '-h': case undefined:
             console.log(USAGE);
             break;

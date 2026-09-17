@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfect Tweet - 可视化配置</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .preview-container { background: #f3f4f6; }
+    .config-section { max-height: calc(100vh - 120px); overflow-y: auto; }
+    .slider-label { font-size: 0.75rem; color: #6b7280; }
+    .preview-image { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+    .loading { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .template-btn { transition: all 0.2s; }
+    .template-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- 顶部导航 -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i class="fa-brands fa-x-twitter text-2xl"></i>
+        <div>
+          <h1 class="text-xl font-semibold">Perfect Tweet</h1>
+          <p class="text-xs text-gray-500">可视化模板配置</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="saveTemplate()" class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+          <i class="fa-solid fa-save mr-2"></i>保存模板
+        </button>
+        <button onclick="resetToDefault()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+          <i class="fa-solid fa-undo mr-2"></i>重置默认
+        </button>
+        <a href="https://github.com/RevaHuai/tweet-card-skill" target="_blank" class="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors">
+          <i class="fa-brands fa-github text-lg"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+      <!-- 左侧配置面板 -->
+      <div class="lg:col-span-3">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="font-semibold text-lg">配置参数</h2>
+            <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">实时生效</span>
+          </div>
+
+          <div class="config-section px-6 py-4 space-y-6">
+
+            <!-- 主题 -->
+            <div>
+              <label class="block text-sm font-medium mb-2">主题</label>
+              <div class="flex gap-3">
+                <button onclick="setTheme('black')" id="theme-black"
+                  class="flex-1 px-4 py-3 rounded-lg border-2 border-black bg-black text-white font-medium text-sm transition-all">
+                  <i class="fa-solid fa-moon mr-2"></i>深色
+                </button>
+                <button onclick="setTheme('white')" id="theme-white"
+                  class="flex-1 px-4 py-3 rounded-lg border-2 border-gray-300 hover:border-gray-400 font-medium text-sm transition-all">
+                  <i class="fa-solid fa-sun mr-2"></i>浅色
+                </button>
+              </div>
+            </div>
+
+            <!-- 尺寸预设 -->
+            <div>
+              <label class="block text-sm font-medium mb-2">卡片尺寸</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button onclick="setDimension('instagram')" id="dim-instagram"
+                  class="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors">Instagram 9:16</button>
+                <button onclick="setDimension('square')" id="dim-square"
+                  class="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors">正方形 1:1</button>
+                <button onclick="setDimension('16:9')" id="dim-16-9"
+                  class="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors">16:9 横屏</button>
+                <button onclick="setDimension('3:4')" id="dim-3-4"
+                  class="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors">3:4 竖屏</button>
+                <button onclick="setDimension('4:3')" id="dim-4-3"
+                  class="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors">4:3 横屏</button>
+                <button onclick="setDimension('2:3')" id="dim-2-3"
+                  class="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors">2:3 竖屏</button>
+              </div>
+            </div>
+
+            <!-- 字号缩放 -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-medium">字号缩放</label>
+                <span id="fontScale-value" class="text-sm text-gray-500 font-mono">100%</span>
+              </div>
+              <input type="range" id="fontScale" min="60" max="160" step="5" value="100"
+                class="w-full accent-black" oninput="updateConfig('fontScale', this.value)">
+            </div>
+
+            <!-- 内容缩放 -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-medium">内容缩放</label>
+                <span id="contentScale-value" class="text-sm text-gray-500 font-mono">92%</span>
+              </div>
+              <input type="range" id="contentScale" min="70" max="110" step="2" value="92"
+                class="w-full accent-black" oninput="updateConfig('contentScale', this.value)">
+            </div>
+
+            <!-- 内容宽度 -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-medium">内容宽度</label>
+                <span id="contentWidth-value" class="text-sm text-gray-500 font-mono">92%</span>
+              </div>
+              <input type="range" id="contentWidth" min="60" max="100" step="2" value="92"
+                class="w-full accent-black" oninput="updateConfig('contentWidth', this.value)">
+            </div>
+
+            <!-- 卡片透明度 -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-medium">卡片透明度</label>
+                <span id="cardOpacity-value" class="text-sm text-gray-500 font-mono">92%</span>
+              </div>
+              <input type="range" id="cardOpacity" min="60" max="100" step="2" value="92"
+                class="w-full accent-black" oninput="updateConfig('cardOpacity', this.value)">
+            </div>
+
+            <!-- 浮层偏移 -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-sm font-medium">偏移 X</label>
+                  <span id="cardOffsetX-value" class="text-sm text-gray-500 font-mono">0</span>
+                </div>
+                <input type="range" id="cardOffsetX" min="-100" max="100" step="5" value="0"
+                  class="w-full accent-black" oninput="updateConfig('cardOffsetX', this.value)">
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-sm font-medium">偏移 Y</label>
+                  <span id="cardOffsetY-value" class="text-sm text-gray-500 font-mono">0</span>
+                </div>
+                <input type="range" id="cardOffsetY" min="-100" max="100" step="5" value="0"
+                  class="w-full accent-black" oninput="updateConfig('cardOffsetY', this.value)">
+              </div>
+            </div>
+
+            <!-- 颜色 -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-2">卡片颜色</label>
+                <div class="flex gap-2">
+                  <input type="color" id="cardColor" value="#000000" class="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                    oninput="updateConfig('cardColor', this.value)">
+                  <input type="text" id="cardColor-text" value="#000000" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono"
+                    onblur="updateConfig('cardColor', this.value)">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2">文字颜色</label>
+                <div class="flex gap-2">
+                  <input type="color" id="textColor" value="#ffffff" class="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                    oninput="updateConfig('textColor', this.value)">
+                  <input type="text" id="textColor-text" value="#ffffff" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono"
+                    onblur="updateConfig('textColor', this.value)">
+                </div>
+              </div>
+            </div>
+
+            <!-- 显示选项 -->
+            <div>
+              <label class="block text-sm font-medium mb-3">显示元素</label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" id="showDate" checked class="w-4 h-4 accent-black"
+                    onchange="updateConfig('showDate', this.checked)">
+                  <span class="text-sm">显示日期</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" id="showViews" checked class="w-4 h-4 accent-black"
+                    onchange="updateConfig('showViews', this.checked)">
+                  <span class="text-sm">显示浏览量</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" id="showTranslate" class="w-4 h-4 accent-black"
+                    onchange="updateConfig('showTranslate', this.checked)">
+                  <span class="text-sm">显示翻译链接</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" id="showStats" checked class="w-4 h-4 accent-black"
+                    onchange="updateConfig('showStats', this.checked)">
+                  <span class="text-sm">显示互动数据</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 背景图上传 -->
+            <div>
+              <label class="block text-sm font-medium mb-2">背景图片</label>
+              <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                <input type="file" id="bgImage-upload" accept="image/*" class="hidden" onchange="uploadBackground(event)">
+                <button onclick="document.getElementById('bgImage-upload').click()" class="text-sm text-gray-600 hover:text-black transition-colors">
+                  <i class="fa-solid fa-upload mr-2"></i>点击上传背景图
+                </button>
+                <p class="text-xs text-gray-400 mt-1">支持 JPG/PNG，建议 2K 分辨率</p>
+                <div id="bgImage-preview" class="hidden mt-3">
+                  <img id="bgImage-thumb" class="max-h-20 mx-auto rounded" alt="背景预览">
+                  <button onclick="removeBackground()" class="mt-2 text-xs text-red-500 hover:text-red-600">
+                    <i class="fa-solid fa-trash mr-1"></i>移除背景
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 输出设置 -->
+            <div class="pt-4 border-t border-gray-200">
+              <details class="text-sm">
+                <summary class="cursor-pointer text-gray-600 hover:text-gray-900 font-medium">高级设置</summary>
+                <div class="mt-4 space-y-4 pl-1">
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">输出目录</label>
+                    <input type="text" id="outputDir" value="~/Downloads/tweet-cards"
+                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                      onblur="updateConfig('outputDir', this.value)">
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">导出倍率</label>
+                      <select id="scale" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                        onchange="updateConfig('scale', parseInt(this.value))">
+                        <option value="1">1x</option>
+                        <option value="2" selected>2x（推荐）</option>
+                        <option value="3">3x</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">时区</label>
+                      <input type="text" id="timeZone" value="Asia/Shanghai"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono"
+                        onblur="updateConfig('timeZone', this.value)">
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧预览区 -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-24">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="font-semibold text-lg">实时预览</h2>
+            <div class="flex gap-2">
+              <button onclick="refreshPreview()" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-sync-alt mr-1"></i>刷新
+              </button>
+              <button onclick="generateTestCard()" class="px-4 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fa-solid fa-magic mr-1"></i>生成测试卡片
+              </button>
+            </div>
+          </div>
+
+          <div class="p-6 preview-container min-h-[500px] flex items-center justify-center">
+            <div id="preview-loading" class="hidden text-center">
+              <i class="fa-solid fa-spinner fa-spin text-3xl text-gray-400"></i>
+              <p class="mt-3 text-sm text-gray-500">渲染中...</p>
+            </div>
+            <div id="preview-result" class="w-full">
+              <div id="preview-placeholder" class="text-center py-12">
+                <i class="fa-solid fa-image text-5xl text-gray-300"></i>
+                <p class="mt-4 text-sm text-gray-400">调整左侧参数后点击"生成测试卡片"查看效果</p>
+              </div>
+              <img id="preview-image" class="preview-image hidden mx-auto" alt="预览图">
+            </div>
+          </div>
+
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+            <p class="text-xs text-gray-500 text-center">
+              <i class="fa-solid fa-info-circle mr-1"></i>
+              预览图仅供参考，实际导出使用 2x 倍率高清渲染
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 提示 Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-black text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+    <i class="fa-solid fa-check-circle"></i>
+    <span id="toast-message"></span>
+  </div>
+
+  <script>
+    // 当前配置状态
+    let currentConfig = {};
+
+    // 默认配置（与后端保持一致）
+    const DEFAULTS = {
+      theme: 'black',
+      cardColor: '#000000',
+      textColor: '#ffffff',
+      dimension: 'instagram',
+      fontScale: 100,
+      contentScale: 92,
+      contentWidth: 92,
+      showDate: true,
+      showViews: true,
+      showTranslate: false,
+      showStats: true,
+      bgImage: null,
+      cardOpacity: 92,
+      cardOffsetX: 0,
+      cardOffsetY: 0,
+      outputDir: '~/Downloads/tweet-cards',
+      scale: 2,
+      timeZone: 'Asia/Shanghai'
+    };
+
+    // 初始化
+    async function init() {
+      // 从后端加载当前配置
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          currentConfig = await res.json();
+        } else {
+          currentConfig = { ...DEFAULTS };
+        }
+      } catch (e) {
+        currentConfig = { ...DEFAULTS };
+      }
+
+      // 同步表单
+      syncFormFromConfig();
+
+      // 初始预览提示
+      console.log('[UI] 配置已加载', currentConfig);
+    }
+
+    function syncFormFromConfig() {
+      // 主题
+      setTheme(currentConfig.theme || 'black', false);
+
+      // 尺寸
+      setDimension(currentConfig.dimension || 'instagram', false);
+
+      // 滑块
+      const sliders = ['fontScale', 'contentScale', 'contentWidth', 'cardOpacity', 'cardOffsetX', 'cardOffsetY'];
+      sliders.forEach(key => {
+        const input = document.getElementById(key);
+        const valueSpan = document.getElementById(key + '-value');
+        if (input && currentConfig[key] !== undefined) {
+          input.value = currentConfig[key];
+          if (valueSpan) valueSpan.textContent = key.includes('Offset') ? currentConfig[key] : currentConfig[key] + '%';
+        }
+      });
+
+      // 颜色
+      if (currentConfig.cardColor) {
+        document.getElementById('cardColor').value = currentConfig.cardColor;
+        document.getElementById('cardColor-text').value = currentConfig.cardColor;
+      }
+      if (currentConfig.textColor) {
+        document.getElementById('textColor').value = currentConfig.textColor;
+        document.getElementById('textColor-text').value = currentConfig.textColor;
+      }
+
+      // 复选框
+      ['showDate', 'showViews', 'showTranslate', 'showStats'].forEach(key => {
+        const cb = document.getElementById(key);
+        if (cb) cb.checked = currentConfig[key] !== false;
+      });
+
+      // 其他
+      if (currentConfig.outputDir) document.getElementById('outputDir').value = currentConfig.outputDir;
+      if (currentConfig.scale) document.getElementById('scale').value = currentConfig.scale;
+      if (currentConfig.timeZone) document.getElementById('timeZone').value = currentConfig.timeZone;
+
+      // 背景图
+      if (currentConfig.bgImage) {
+        showBgPreview(currentConfig.bgImage);
+      }
+    }
+
+    function updateConfig(key, value) {
+      // 更新当前配置
+      if (key === 'cardColor' || key === 'textColor') {
+        // 同步颜色输入框
+        const colorInput = document.getElementById(key);
+        const textInput = document.getElementById(key + '-text');
+        if (colorInput) colorInput.value = value;
+        if (textInput) textInput.value = value;
+      }
+
+      if (['fontScale', 'contentScale', 'contentWidth', 'cardOpacity'].includes(key)) {
+        const span = document.getElementById(key + '-value');
+        if (span) span.textContent = value + '%';
+      }
+      if (['cardOffsetX', 'cardOffsetY'].includes(key)) {
+        const span = document.getElementById(key + '-value');
+        if (span) span.textContent = value;
+      }
+
+      currentConfig[key] = value;
+
+      // 自动保存到后端（防抖）
+      debouncedSave();
+    }
+
+    let saveTimer = null;
+    function debouncedSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentConfig)
+          });
+          console.log('[UI] 配置已保存');
+        } catch (e) {
+          console.error('[UI] 保存失败', e);
+        }
+      }, 500);
+    }
+
+    function setTheme(theme, autoSave = true) {
+      // 更新按钮样式
+      document.getElementById('theme-black').className =
+        theme === 'black'
+          ? 'flex-1 px-4 py-3 rounded-lg border-2 border-black bg-black text-white font-medium text-sm transition-all'
+          : 'flex-1 px-4 py-3 rounded-lg border-2 border-gray-300 hover:border-gray-400 font-medium text-sm transition-all';
+
+      document.getElementById('theme-white').className =
+        theme === 'white'
+          ? 'flex-1 px-4 py-3 rounded-lg border-2 border-black bg-white text-black font-medium text-sm transition-all'
+          : 'flex-1 px-4 py-3 rounded-lg border-2 border-gray-300 hover:border-gray-400 font-medium text-sm transition-all';
+
+      currentConfig.theme = theme;
+
+      // 联动卡片/文字颜色
+      if (theme === 'black') {
+        currentConfig.cardColor = '#000000';
+        currentConfig.textColor = '#ffffff';
+        document.getElementById('cardColor').value = '#000000';
+        document.getElementById('cardColor-text').value = '#000000';
+        document.getElementById('textColor').value = '#ffffff';
+        document.getElementById('textColor-text').value = '#ffffff';
+      } else {
+        currentConfig.cardColor = '#ffffff';
+        currentConfig.textColor = '#000000';
+        document.getElementById('cardColor').value = '#ffffff';
+        document.getElementById('cardColor-text').value = '#ffffff';
+        document.getElementById('textColor').value = '#000000';
+        document.getElementById('textColor-text').value = '#000000';
+      }
+
+      if (autoSave) debouncedSave();
+    }
+
+    function setDimension(dim, autoSave = true) {
+      // 清除所有按钮高亮
+      ['instagram', 'square', '16:9', '3:4', '4:3', '2:3'].forEach(d => {
+        const btn = document.getElementById('dim-' + d.replace(':', '-'));
+        if (btn) btn.className = 'px-3 py-2 text-sm rounded-lg border border-gray-300 hover:border-black transition-colors';
+      });
+
+      // 高亮当前
+      const activeBtn = document.getElementById('dim-' + dim.replace(':', '-'));
+      if (activeBtn) activeBtn.className = 'px-3 py-2 text-sm rounded-lg border-2 border-black bg-black text-white transition-colors';
+
+      currentConfig.dimension = dim;
+      if (autoSave) debouncedSave();
+    }
+
+    async function uploadBackground(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('bgImage', file);
+
+      try {
+        const res = await fetch('/api/upload-bg', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          currentConfig.bgImage = data.path;
+          showBgPreview(data.path);
+          debouncedSave();
+          showToast('背景图上传成功');
+        } else {
+          showToast('上传失败: ' + (await res.text()), true);
+        }
+      } catch (e) {
+        showToast('上传失败: ' + e.message, true);
+      }
+    }
+
+    function showBgPreview(path) {
+      const preview = document.getElementById('bgImage-preview');
+      const thumb = document.getElementById('bgImage-thumb');
+      preview.classList.remove('hidden');
+      thumb.src = '/api/bg-image?' + Date.now(); // 强制刷新
+    }
+
+    async function removeBackground() {
+      currentConfig.bgImage = null;
+      document.getElementById('bgImage-preview').classList.add('hidden');
+      document.getElementById('bgImage-upload').value = '';
+      debouncedSave();
+      showToast('已移除背景图');
+    }
+
+    async function refreshPreview() {
+      await generateTestCard();
+    }
+
+    async function generateTestCard() {
+      const loading = document.getElementById('preview-loading');
+      const placeholder = document.getElementById('preview-placeholder');
+      const img = document.getElementById('preview-image');
+
+      loading.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      img.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentConfig)
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          img.src = url;
+          img.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+        } else {
+          const text = await res.text();
+          showToast('预览生成失败: ' + text, true);
+          placeholder.classList.remove('hidden');
+        }
+      } catch (e) {
+        showToast('预览生成失败: ' + e.message, true);
+        placeholder.classList.remove('hidden');
+      } finally {
+        loading.classList.add('hidden');
+      }
+    }
+
+    async function saveTemplate() {
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentConfig)
+        });
+
+        if (res.ok) {
+          showToast('模板已保存！现在可以使用 perfect-tweet generate <链接> 生成卡片');
+        } else {
+          showToast('保存失败', true);
+        }
+      } catch (e) {
+        showToast('保存失败: ' + e.message, true);
+      }
+    }
+
+    async function resetToDefault() {
+      if (!confirm('确定要重置为默认配置吗？')) return;
+
+      try {
+        const res = await fetch('/api/reset', { method: 'POST' });
+        if (res.ok) {
+          currentConfig = await res.json();
+          syncFormFromConfig();
+          showToast('已重置为默认配置');
+        }
+      } catch (e) {
+        showToast('重置失败: ' + e.message, true);
+      }
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const span = document.getElementById('toast-message');
+      span.textContent = msg;
+      toast.className = isError
+        ? 'fixed bottom-6 right-6 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2'
+        : 'fixed bottom-6 right-6 bg-black text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2';
+      toast.classList.remove('hidden');
+
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    // 监听颜色文本框输入
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+
+      // 颜色文本框同步
+      ['cardColor', 'textColor'].forEach(key => {
+        const textInput = document.getElementById(key + '-text');
+        if (textInput) {
+          textInput.addEventListener('input', () => {
+            const colorInput = document.getElementById(key);
+            if (colorInput && /^#[0-9a-fA-F]{6}$/.test(textInput.value)) {
+              colorInput.value = textInput.value;
+            }
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
