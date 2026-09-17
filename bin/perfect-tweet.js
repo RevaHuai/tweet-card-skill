@@ -3,6 +3,8 @@
  * perfect-tweet CLI
  * 命令：
  *   config  [key=value ...] | --reset     查看 / 设置模板配置（持久化）
+ *   template export <文件>                  导出当前模板为 JSON 文件
+ *   template import <文件>                  从 JSON 文件导入模板配置
  *   generate <链接...> [--out DIR] [--viral] [--set likes=N,views=N] [--dim KEY] [--scale N]
  *                                          批量抓取推文并生成卡片 PNG
  *   preview [--out FILE]                   用示例数据按当前模板渲染一张预览
@@ -39,9 +41,11 @@ const USAGE = `perfect-tweet — X 推文卡片批量生成器
   perfect-tweet config                       查看当前模板配置
   perfect-tweet config key=value ...         修改配置（立即持久化）
   perfect-tweet config --reset               恢复默认模板
+  perfect-tweet template export <文件>       导出当前模板为 JSON（供网页版配置工具使用）
+  perfect-tweet template import <文件>       从 JSON 导入模板配置
   perfect-tweet generate <链接...>           批量生成卡片（支持多链接混排一段文本）
   perfect-tweet preview                      用示例推文按当前模板渲染预览图
-  perfect-tweet ui                           启动可视化配置界面（推荐首次使用）
+  perfect-tweet ui                           启动可视化配置界面（推荐先用网页版）
 
 generate 选项：
   --out DIR            输出目录（默认取配置 outputDir）
@@ -51,17 +55,17 @@ generate 选项：
   --set k=v,k=v        覆盖互动数据（replies/retweets/likes/bookmarks/views）
   --theme KEY          临时主题 black | white
 
-config 常用字段：
-  theme cardColor textColor dimension fontScale contentScale contentWidth
-  showDate showViews showTranslate showStats bgImage cardOpacity
-  cardOffsetX cardOffsetY outputDir scale timeZone
+模板工作流（推荐）：
+  1. 打开 https://perfect-tweet-a6pm.vercel.app/ 配置模板
+  2. 在网页上点"导出模板"下载 JSON
+  3. perfect-tweet template import <下载的文件.json>
+  4. perfect-tweet generate <推文链接>
 
 示例：
-  perfect-tweet ui                           # 打开可视化配置界面
+  perfect-tweet template export /tmp/tpl.json
+  perfect-tweet template import /tmp/tpl.json
   perfect-tweet config dimension=2:3 fontScale=120 showTranslate=true
-  perfect-tweet config bgImage=~/Pictures/bg.jpg cardOpacity=85
-  perfect-tweet generate https://x.com/user/status/123 https://x.com/other/status/456
-  perfect-tweet generate "$(pbpaste)" --viral --out ~/Desktop/cards
+  perfect-tweet generate https://x.com/user/status/123
 `;
 
 /* ---------- 参数解析 ---------- */
@@ -541,6 +545,78 @@ async function waitAssets(page) {
     });
 }
 
+/* ---------- 模板导出 / 导入 ---------- */
+
+async function cmdTemplateExport(args) {
+    const { positional } = parseArgs(args);
+    if (!positional.length) {
+        console.error('❌ 用法：perfect-tweet template export <文件路径>\n  例：perfect-tweet template export /tmp/tpl.json');
+        process.exitCode = 1;
+        return;
+    }
+    const config = loadConfig();
+    const outPath = expandTilde(positional[0]);
+    // 只导出模板字段，排除运行时状态
+    const exportKeys = [
+        'theme','cardColor','textColor','dimension','fontScale','contentScale','contentWidth',
+        'showDate','showViews','showTranslate','showStats','bgImage','cardOpacity',
+        'cardOffsetX','cardOffsetY','scale','timeZone'
+    ];
+    const tpl = {};
+    for (const k of exportKeys) {
+        if (k in config) tpl[k] = config[k];
+    }
+    fs.mkdirSync(path.dirname(outPath) || '.', { recursive: true });
+    fs.writeFileSync(outPath, JSON.stringify(tpl, null, 2) + '\n', 'utf8');
+    console.log('✅ 模板已导出：' + outPath);
+    console.log('\n' + JSON.stringify(tpl, null, 2));
+}
+
+async function cmdTemplateImport(args) {
+    const { positional } = parseArgs(args);
+    if (!positional.length) {
+        console.error('❌ 用法：perfect-tweet template import <文件路径>\n  例：perfect-tweet template import /tmp/tpl.json');
+        process.exitCode = 1;
+        return;
+    }
+    const inPath = expandTilde(positional[0]);
+    if (!fs.existsSync(inPath)) {
+        console.error('❌ 文件不存在：' + inPath);
+        process.exitCode = 1;
+        return;
+    }
+    let raw;
+    try {
+        raw = JSON.parse(fs.readFileSync(inPath, 'utf8'));
+    } catch (e) {
+        console.error('❌ JSON 解析失败：' + e.message);
+        process.exitCode = 1;
+        return;
+    }
+    if (typeof raw !== 'object' || Array.isArray(raw)) {
+        console.error('❌ 模板 JSON 应为对象格式');
+        process.exitCode = 1;
+        return;
+    }
+    const { ok, patch: clean, errors } = validatePatch(raw);
+    if (!ok) {
+        console.error('❌ 模板校验失败：\n  - ' + errors.join('\n  - '));
+        process.exitCode = 1;
+        return;
+    }
+    const current = loadConfig();
+    applyTheme(clean, current);
+    const next = { ...current, ...clean };
+    if (next.bgImage && next.bgImage.startsWith('~')) {
+        next.bgImage = expandTilde(next.bgImage);
+    }
+    saveConfig(next);
+    console.log('✅ 模板已导入并保存：');
+    for (const k of Object.keys(clean)) console.log('  ' + k + ' = ' + JSON.stringify(next[k]));
+    console.log('\n文件：' + CONFIG_PATH);
+    console.log('\n可运行 perfect-tweet preview 查看效果');
+}
+
 /* ---------- 入口 ---------- */
 
 async function main() {
@@ -548,6 +624,15 @@ async function main() {
 
     switch (cmd) {
         case 'config': await cmdConfig(rest); break;
+        case 'template':
+            const [sub, ...subRest] = rest;
+            if (sub === 'export') await cmdTemplateExport(subRest);
+            else if (sub === 'import') await cmdTemplateImport(subRest);
+            else {
+                console.error('❌ template 子命令：export | import\n  例：perfect-tweet template export /tmp/tpl.json');
+                process.exitCode = 1;
+            }
+            break;
         case 'generate': case 'gen': await cmdGenerate(rest); break;
         case 'preview': await cmdPreview(rest); break;
         case 'ui': case 'web': await cmdUI(rest); break;
