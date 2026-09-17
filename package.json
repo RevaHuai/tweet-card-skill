@@ -10,7 +10,6 @@
         "node": ">=18.0.0"
     },
     "dependencies": {
-        "busboy": "^1.6.0",
         "puppeteer": "^23.11.1"
     },
     "license": "MIT"

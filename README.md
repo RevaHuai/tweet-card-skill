@@ -64,26 +64,30 @@ perfect-tweet preview
 
 ## 快速开始
 
-**推荐首次使用方式**：
+**推荐首次使用方式——网页配置模板，一键导入**：
+
+1. 打开 [perfect-tweet 网页版](https://perfect-tweet-a6pm.vercel.app/)，可视化调整主题、尺寸、字号、背景图，实时预览
+2. 满意后点「导出模板」，下载 JSON 文件
+3. 导入模板并预览确认：
 
 ```bash
-# 方式一：可视化配置界面（最直观，推荐）
-perfect-tweet ui
-# 浏览器自动打开，调整参数，点击"生成测试卡片"预览，满意后保存
+perfect-tweet template import ~/Downloads/tweet-template.json   # 导入模板（持久保存）
+perfect-tweet preview                                           # 示例卡片确认效果
 ```
 
+4. 之后批量生成——粘贴任意多条链接：
+
 ```bash
-# 方式二：命令行配置
-# 1. 设置模板（一次即可，持久保存）
-perfect-tweet config theme=white dimension=16:9
-
-# 2. 预览确认效果
-perfect-tweet preview
-
-# 3. 批量生成——粘贴任意多条链接
 perfect-tweet generate \
   https://x.com/elonmusk/status/... \
   https://x.com/TheEllenShow/status/...
+```
+
+**备选：纯命令行配置**（不想用网页时）：
+
+```bash
+perfect-tweet config theme=white dimension=16:9   # 一次即可，持久保存
+perfect-tweet preview                             # 预览确认
 ```
 
 输出到 `~/Downloads/tweet-cards/`，文件名 `tweet-{handle}-{序号}.png`。
@@ -109,31 +113,14 @@ perfect-tweet preview --out ~/Desktop/a.png # 指定输出路径
 
 用示例数据渲染一张卡片，设置完模板后先跑一次确认视觉效果。
 
-### `ui` / `web` — 可视化配置界面（推荐首次使用）
-
-启动本地 Web 界面，可视化调整所有模板参数，实时预览效果，支持上传背景图：
+### `template` — 模板导入 / 导出
 
 ```bash
-perfect-tweet ui
-# 或
-perfect-tweet web
+perfect-tweet template import <文件.json>   # 从网页版导出的 JSON 导入模板（持久化）
+perfect-tweet template export <文件.json>   # 导出当前模板为 JSON（备份 / 分享 / 回传网页）
 ```
 
-**界面特性**：
-- 🎨 实时滑块/颜色选择器调整参数
-- 📐 6 种尺寸预设一键切换
-- 🖼️ 拖拽上传背景图
-- 👁️ 实时预览渲染（点击"生成测试卡片"）
-- 💾 保存后立即生效，可用于 `generate`
-
-**首次使用推荐流程**：
-1. 运行 `perfect-tweet ui`
-2. 浏览器自动打开，调整主题、尺寸、字号等
-3. 点击"生成测试卡片"查看效果
-4. 满意后点击"保存模板"
-5. 关闭界面，之后直接用 `generate` 批量出图
-
-> ⚠️ 首次使用需安装依赖：`cd <skills 目录>/perfect-tweet && npm install`（会自动安装 `busboy` 用于文件上传）
+网页版（https://perfect-tweet-a6pm.vercel.app/）配置后点「导出模板」下载 JSON，用 `template import` 一条命令导入；换模板就在网页上再导出一次重新 import，直接覆盖。
 
 ### `generate` — 批量生成（核心命令）
 
@@ -196,7 +183,7 @@ tweet-card-skill/            # 仓库根即 Skill 根，clone 到 skills 目录�
 ├── LICENSE
 ├── package.json
 ├── bin/
-│   └── perfect-tweet.js     # CLI 入口（config / generate / preview）
+│   └── perfect-tweet.js     # CLI 入口（config / template / generate / preview）
 ├── lib/
 │   ├── render.js            # HTML 生成器（一比一复刻 X 详情页排版）
 │   ├── config.js            # 模板读写 + 校验
