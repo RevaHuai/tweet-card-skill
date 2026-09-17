@@ -64,7 +64,16 @@ perfect-tweet preview
 
 ## 快速开始
 
+**推荐首次使用方式**：
+
 ```bash
+# 方式一：可视化配置界面（最直观，推荐）
+perfect-tweet ui
+# 浏览器自动打开，调整参数，点击"生成测试卡片"预览，满意后保存
+```
+
+```bash
+# 方式二：命令行配置
 # 1. 设置模板（一次即可，持久保存）
 perfect-tweet config theme=white dimension=16:9
 
@@ -99,6 +108,32 @@ perfect-tweet preview --out ~/Desktop/a.png # 指定输出路径
 ```
 
 用示例数据渲染一张卡片，设置完模板后先跑一次确认视觉效果。
+
+### `ui` / `web` — 可视化配置界面（推荐首次使用）
+
+启动本地 Web 界面，可视化调整所有模板参数，实时预览效果，支持上传背景图：
+
+```bash
+perfect-tweet ui
+# 或
+perfect-tweet web
+```
+
+**界面特性**：
+- 🎨 实时滑块/颜色选择器调整参数
+- 📐 6 种尺寸预设一键切换
+- 🖼️ 拖拽上传背景图
+- 👁️ 实时预览渲染（点击"生成测试卡片"）
+- 💾 保存后立即生效，可用于 `generate`
+
+**首次使用推荐流程**：
+1. 运行 `perfect-tweet ui`
+2. 浏览器自动打开，调整主题、尺寸、字号等
+3. 点击"生成测试卡片"查看效果
+4. 满意后点击"保存模板"
+5. 关闭界面，之后直接用 `generate` 批量出图
+
+> ⚠️ 首次使用需安装依赖：`cd <skills 目录>/perfect-tweet && npm install`（会自动安装 `busboy` 用于文件上传）
 
 ### `generate` — 批量生成（核心命令）
 
