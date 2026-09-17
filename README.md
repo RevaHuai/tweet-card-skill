@@ -25,7 +25,7 @@
 
 ## 安装
 
-本 Skill 采用标准 `SKILL.md` 格式，与宿主无关——**任何支持 Skills 的 Agent 都能装载**，配置跟随安装位置自包含，装到哪都能用。
+本 Skill 采用标准 `SKILL.md` 格式，与宿主无关——**任何支持 Skills 的 Agent 都能装载**，clone 即安装、装到哪都能用。
 
 ### 方式一：装入任意 Agent（Claude Code / NewMax / Cursor 等）
 
@@ -64,26 +64,30 @@ perfect-tweet preview
 
 ## 快速开始
 
-**推荐首次使用方式**：
+**推荐首次使用方式——网页配置模板，一键导入**：
+
+1. 打开 [perfect-tweet 网页版](https://perfect-tweet-a6pm.vercel.app/)，可视化调整主题、尺寸、字号、背景图，实时预览
+2. 满意后点右上角的导出按钮（↓ 图标，悬停提示「导出模板 JSON」），下载 JSON 文件
+3. 导入模板并预览确认：
 
 ```bash
-# 方式一：可视化配置界面（最直观，推荐）
-perfect-tweet ui
-# 浏览器自动打开，调整参数，点击"生成测试卡片"预览，满意后保存
+perfect-tweet template import ~/Downloads/tweet-template.json   # 导入模板（持久保存）
+perfect-tweet preview                                           # 示例卡片确认效果
 ```
 
+4. 之后批量生成——粘贴任意多条链接：
+
 ```bash
-# 方式二：命令行配置
-# 1. 设置模板（一次即可，持久保存）
-perfect-tweet config theme=white dimension=16:9
-
-# 2. 预览确认效果
-perfect-tweet preview
-
-# 3. 批量生成——粘贴任意多条链接
 perfect-tweet generate \
   https://x.com/elonmusk/status/... \
   https://x.com/TheEllenShow/status/...
+```
+
+**备选：纯命令行配置**（不想用网页时）：
+
+```bash
+perfect-tweet config theme=white dimension=16:9   # 一次即可，持久保存
+perfect-tweet preview                             # 预览确认
 ```
 
 输出到 `~/Downloads/tweet-cards/`，文件名 `tweet-{handle}-{序号}.png`。
@@ -109,31 +113,14 @@ perfect-tweet preview --out ~/Desktop/a.png # 指定输出路径
 
 用示例数据渲染一张卡片，设置完模板后先跑一次确认视觉效果。
 
-### `ui` / `web` — 可视化配置界面（推荐首次使用）
-
-启动本地 Web 界面，可视化调整所有模板参数，实时预览效果，支持上传背景图：
+### `template` — 模板导入 / 导出
 
 ```bash
-perfect-tweet ui
-# 或
-perfect-tweet web
+perfect-tweet template import <文件.json>   # 从网页版导出的 JSON 导入模板（持久化）
+perfect-tweet template export <文件.json>   # 导出当前模板为 JSON（备份 / 分享 / 回传网页）
 ```
 
-**界面特性**：
-- 🎨 实时滑块/颜色选择器调整参数
-- 📐 6 种尺寸预设一键切换
-- 🖼️ 拖拽上传背景图
-- 👁️ 实时预览渲染（点击"生成测试卡片"）
-- 💾 保存后立即生效，可用于 `generate`
-
-**首次使用推荐流程**：
-1. 运行 `perfect-tweet ui`
-2. 浏览器自动打开，调整主题、尺寸、字号等
-3. 点击"生成测试卡片"查看效果
-4. 满意后点击"保存模板"
-5. 关闭界面，之后直接用 `generate` 批量出图
-
-> ⚠️ 首次使用需安装依赖：`cd <skills 目录>/perfect-tweet && npm install`（会自动安装 `busboy` 用于文件上传）
+网页版（https://perfect-tweet-a6pm.vercel.app/）配置后点「导出模板」下载 JSON，用 `template import` 一条命令导入；换模板就在网页上再导出一次重新 import，直接覆盖。
 
 ### `generate` — 批量生成（核心命令）
 
@@ -174,12 +161,12 @@ perfect-tweet generate <url> --dim 2:3 --out ~/Desktop     # 临时换尺寸/输
 | `scale` | 1~5 | 3 | 导出倍率（3 = 3 倍高清） |
 | `timeZone` | IANA 时区 | `Asia/Shanghai` | 推文时间显示时区 |
 
-配置持久化在 Skill 目录的 `config.json`，可手动编辑，重启不丢失。
+配置持久化在 `~/.newmax/skills/perfect-tweet/config.json`（Agent skills 标准安装位置，可手动编辑，重启不丢失）；设置环境变量 `PERFECT_TWEET_CONFIG=/path/to/config.json` 可改用自定义路径，实现多实例共享配置。
 
 ## 常见问题
 
 **Q：Chromium 启动失败？**
-内置 Chrome 智能回退链：优先用 Puppeteer 自带 Chromium，异常时自动探测系统 Chrome（macOS `/Applications/Google Chrome.app`、Linux `google-chrome`、Windows 注册表路径）。确保系统装有任一 Chrome 即可。
+内置 Chrome 智能回退链：优先用 Puppeteer 自带 Chromium，异常时自动探测系统 Chrome（macOS `/Applications/Google Chrome.app`、Linux `google-chrome`、Windows 常见安装目录）。确保系统装有任一 Chrome 即可。
 
 **Q：某条推文抓取失败？**
 默认走 fxtwitter 公开 API，只能获取**公开推文**。私密账号、已删除推文拿不到。配置环境变量 `X_API_BEARER_TOKEN` 可走 X 官方 API v2（字段更全），失败自动回退 fxtwitter。
@@ -196,7 +183,7 @@ tweet-card-skill/            # 仓库根即 Skill 根，clone 到 skills 目录�
 ├── LICENSE
 ├── package.json
 ├── bin/
-│   └── perfect-tweet.js     # CLI 入口（config / generate / preview）
+│   └── perfect-tweet.js     # CLI 入口（config / template / generate / preview）
 ├── lib/
 │   ├── render.js            # HTML 生成器（一比一复刻 X 详情页排版）
 │   ├── config.js            # 模板读写 + 校验

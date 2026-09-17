@@ -1,75 +1,72 @@
 ---
 name: perfect-tweet
-description: X/Twitter 推文卡片批量生成器。当用户想把推文做成精美分享卡片、批量生成推文图片、导出 X 截图风格的 PNG 时使用。用户只需设置一次模板（主题/尺寸/字号/背景图等），之后粘贴任意多条推文链接即可一键批量导出高清卡片。触发词：推文卡片、推特卡片、tweet card、生成推文图片、批量出卡片。
+description: X/Twitter 推文卡片批量生成器。当用户想把推文做成精美分享卡片、批量生成推文图片、导出 X 截图风格的 PNG 时使用。用户只需在网页上设置一次模板并导入，之后粘贴任意多条推文链接即可一键批量导出高清卡片。触发词：推文卡片、推特卡片、tweet card、生成推文图片、批量出卡片。
 ---
 
 # perfect-tweet — X 推文卡片批量生成器
 
-把任意 X（Twitter）推文渲染成 X 官方详情页风格的高清分享卡片。视觉一比一复刻 X 网页版（Chirp 字体回退链、官方色彩 tokens、lucide 图标、蓝色认证标）。**设置一次模板，之后所有生成全自动。**
+把任意 X（Twitter）推文渲染成 X 官方详情页风格的高清分享卡片。视觉一比一复刻 X 网页版（Chirp 字体回退链、官方色彩 tokens、lucide 图标、蓝色认证标）。**在网页上设置一次模板并导入，之后所有生成全自动。**
 
 ## 依赖与安装
 
 - Node.js ≥ 18
-- 首次使用前在 Skill 目录安装依赖（Puppeteer 会自动下载 Chromium，约 1~2 分钟）：
+- 首次使用前在**本 Skill 的安装目录**执行（Puppeteer 会自动下载 Chromium，约 1~2 分钟）：
 
 ```bash
-cd ~/.newmax/skills/perfect-tweet && npm install
+cd <skill 安装目录> && npm install
 ```
 
-> **依赖说明**：`busboy` 用于健壮解析文件上传（背景图），`puppeteer` 用于卡片渲染。
+> `puppeteer` 用于卡片渲染；Chromium 启动失败时自动探测系统 Chrome（macOS / Linux / Windows 均支持）。
+
+## 首次设置：网页配置模板（主流程）
+
+模板在网页可视化工具里调，导出 JSON 后一条命令导入本地：
+
+1. 提示用户打开 **https://perfect-tweet-a6pm.vercel.app/**
+2. 用户在网页上调整主题、尺寸、字号、背景图等，实时预览
+3. 满意后点右上角的导出按钮（↓ 图标，悬停提示「导出模板 JSON」），下载得到一个 JSON 文件
+4. 导入模板（持久保存，重启不丢）：
+
+```bash
+perfect-tweet template import <下载的文件.json>
+```
+
+5. 跑一次 `preview` 生成示例卡片，用 markdown 图片语法展示给用户确认；不满意就回网页调整再导一次
+6. 确认后进入日常使用：用户给链接 → `generate` 批量出图
+
+> 若 `config.json` 不存在（全新安装），CLI 在无参数运行或 `help` 时也会打印这条引导。
+>
+> 模板持久化在 `~/.newmax/skills/perfect-tweet/config.json`（Agent skills 标准安装位置，与当前工作目录无关）；设置环境变量 `PERFECT_TWEET_CONFIG=/path/to/config.json` 可改用自定义路径（多 Agent 实例共享配置时用）。
+
+**备选（用户不想用网页时）**：直接命令行配置——`perfect-tweet config theme=white dimension=16:9`，再 `preview` 确认，逐项微调。
 
 ## 命令
 
-所有命令都在本 Skill 目录下运行（`node bin/perfect-tweet.js <cmd>` 或 npm link 后直接 `perfect-tweet <cmd>`）。
+所有命令在 Skill 安装目录下运行（`node bin/perfect-tweet.js <cmd>` 或 npm link 后直接 `perfect-tweet <cmd>`）。
 
-### 1. `config` — 设置/查看模板（持久化）
-
-```bash
-# 查看当前模板
-perfect-tweet config
-
-# 修改（可一次多个，立即保存）
-perfect-tweet config theme=white dimension=square fontScale=120
-perfect-tweet config bgImage=~/Pictures/bg.jpg cardOpacity=85 cardOffsetX=0
-perfect-tweet config --reset        # 恢复默认
-```
-
-配置存在 `~/.newmax/skills/perfect-tweet/config.json`，重启不丢失。
-
-### 2. `preview` — 预览当前模板效果
+### `template` — 模板导入 / 导出
 
 ```bash
-perfect-tweet preview
-# 输出示例卡片到 /tmp/perfect-tweet-preview.png（--out 可指定路径）
+perfect-tweet template import <文件.json>   # 从网页导出的 JSON 导入模板（持久化）
+perfect-tweet template export <文件.json>   # 导出当前模板为 JSON（备份/分享/回传网页）
 ```
 
-设置完模板后先跑一次 preview，把图展示给用户确认。
-
-### 3. `ui` / `web` — 可视化配置界面（推荐首次使用）
-
-启动本地 Web 界面，可视化调整所有模板参数，实时预览效果，支持上传背景图：
+### `config` — 命令行查看 / 修改模板
 
 ```bash
-perfect-tweet ui
-# 或
-perfect-tweet web
+perfect-tweet config                        # 查看当前模板
+perfect-tweet config theme=white dimension=square fontScale=120   # 一次改多项
+perfect-tweet config bgImage=~/Pictures/bg.jpg cardOpacity=85
+perfect-tweet config --reset                # 恢复默认
 ```
 
-界面特性：
-- 🎨 实时滑块/颜色选择器调整参数
-- 📐 6 种尺寸预设一键切换
-- 🖼️ 拖拽上传背景图
-- 👁️ 实时预览渲染（点击"生成测试卡片"）
-- 💾 保存后立即生效，可用于 `generate`
+### `preview` — 用示例推文预览当前模板
 
-**首次使用推荐流程**：
-1. 运行 `perfect-tweet ui`
-2. 浏览器自动打开，调整主题、尺寸、字号等
-3. 点击"生成测试卡片"查看效果
-4. 满意后点击"保存模板"
-5. 关闭界面，之后直接用 `generate` 批量出图
+```bash
+perfect-tweet preview                       # 输出示例卡片（--out 可指定路径）
+```
 
-### 4. `generate` — 批量生成卡片（核心命令）
+### `generate` — 批量生成卡片（核心命令）
 
 ```bash
 perfect-tweet generate <链接1> <链接2> ...           # 多条链接
@@ -101,10 +98,11 @@ perfect-tweet generate <链接> --dim 2:3 --out ~/Desktop    # 临时换尺寸/�
 
 ## Agent 标准工作流
 
-1. **首次设置**（推荐）：推荐用户运行 `perfect-tweet ui`，打开可视化界面调整参数，实时预览，保存后关闭。
-   - 如用户偏好 CLI：问用户要风格偏好（暗/亮、用途平台 → 推荐尺寸：Instagram 9:16 / 公众号 16:9 / 抖音 2:3），逐项写入 config，跑 `preview` 展示给用户确认，不满意就微调。
+1. **首次设置**：检测到全新安装（无 config.json）时，引导用户打开 https://perfect-tweet-a6pm.vercel.app/ 配置并导出模板 JSON，然后 `template import` 导入，`preview` 出图给用户确认。
+   - 用户不想用网页：问风格偏好（暗/亮、用途平台 → 推荐尺寸：Instagram 9:16 / 公众号 16:9 / 抖音 2:3），逐项 `config` 写入，`preview` 确认微调。
+   - 用户想换模板：重复网页导出 → `template import` 即可覆盖。
 2. **日常生成**：用户给出一条或多条推文链接（常常直接粘贴一段文字）→ 直接 `generate` → 把生成的 PNG 用 markdown 图片语法内联展示给用户。
-3. **数据修饰**：用户想"数据好看点"→ `--viral`；想精确指定 → `--set likes=N,retweets=N`。
+3. **数据修饰**：用户想「数据好看点」→ `--viral`；想精确指定 → `--set likes=N,retweets=N`。
 4. **失败处理**：单条链接抓取失败不影响其他；提示用户检查链接是否为公开推文（fxtwitter 拿不到私密/删帖）。
 
 ## 增强（可选）
@@ -114,10 +112,10 @@ perfect-tweet generate <链接> --dim 2:3 --out ~/Desktop    # 临时换尺寸/�
 ## 实现结构
 
 ```
-bin/perfect-tweet.js   # CLI 入口（config / generate / preview）
+bin/perfect-tweet.js   # CLI 入口（config / template / generate / preview）
 lib/render.js          # HTML 生成器（一比一复刻 X 详情页排版）
-lib/config.js          # 模板读写 + 校验（~/.newmax/skills/perfect-tweet/config.json）
+lib/config.js          # 模板读写 + 校验（config.json）
 lib/fetch.js           # fxtwitter 抓取（+可选官方 API）
-lib/screenshot.js      # Puppeteer headless 高清截图
+lib/screenshot.js      # Puppeteer headless 高清截图 + Chrome 回退链
 assets/verified.png    # X 蓝色认证标
 ```
