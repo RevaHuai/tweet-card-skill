@@ -17,7 +17,7 @@ description: X/Twitter 推文卡片批量生成器。当用户想把推文做成
 cd <skill 安装目录> && npm install
 ```
 
-> 渲染使用 `puppeteer-core` + 系统浏览器：安装不下载 Chromium（170MB，国内网络会卡死），启动时自动按「`PUPPETEER_EXECUTABLE_PATH` 环境变量 → 系统路径探测（macOS / Linux / Windows）」的顺序找到浏览器。找不到时会报错并给出上面两条解决路径。
+> 渲染使用 `puppeteer-core` + 系统浏览器：安装不下载 Chromium（170MB，国内网络会卡死），启动时自动按「`PUPPETEER_EXECUTABLE_PATH` 环境变量 → 本机 puppeteer 缓存（如有匹配版本）→ 系统路径探测（macOS / Linux / Windows）」的顺序找到浏览器。找不到时会报错并给出上面两条解决路径。
 
 ## 首次设置：网页配置模板（主流程）
 

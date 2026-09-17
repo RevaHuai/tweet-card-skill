@@ -21,7 +21,7 @@ import { extractTweetIds, fetchTweets, applyStatsOverride } from '../lib/fetch.j
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Puppeteer 体积大，仅在真正需要渲染时动态加载（config 等命令不依赖它）
+// 渲染依赖（puppeteer-core）仅在真正需要出图时动态加载，config 等命令启动更快
 async function getScreenshotBatch() {
     try {
         return (await import('../lib/screenshot.js')).screenshotBatch;

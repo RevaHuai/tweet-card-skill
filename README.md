@@ -167,7 +167,7 @@ perfect-tweet generate <url> --dim 2:3 --out ~/Desktop     # 临时换尺寸/输
 ## 常见问题
 
 **Q：提示未找到可启动的 Chrome/Chromium？**
-本 Skill 不随包下载浏览器，渲染复用系统浏览器。启动时自动按「`PUPPETEER_EXECUTABLE_PATH` 环境变量 → 系统路径（macOS `/Applications/Google Chrome.app`、Linux `google-chrome`、Windows 常见安装目录、Edge/Chromium 均可）」的顺序探测。装一个 Google Chrome（绝大多数电脑已有），或设置 `PUPPETEER_EXECUTABLE_PATH` 指向已有浏览器即可。
+本 Skill 不随包下载浏览器，渲染复用系统浏览器。启动时自动按「`PUPPETEER_EXECUTABLE_PATH` 环境变量 → 本机 puppeteer 缓存（如有匹配版本）→ 系统路径（macOS `/Applications/Google Chrome.app`、Linux `google-chrome`、Windows 常见安装目录、Edge/Chromium 均可）」的顺序探测。装一个 Google Chrome（绝大多数电脑已有），或设置 `PUPPETEER_EXECUTABLE_PATH` 指向已有浏览器即可。
 
 **Q：某条推文抓取失败？**
 默认走 fxtwitter 公开 API，只能获取**公开推文**。私密账号、已删除推文拿不到。配置环境变量 `X_API_BEARER_TOKEN` 可走 X 官方 API v2（字段更全），失败自动回退 fxtwitter。
