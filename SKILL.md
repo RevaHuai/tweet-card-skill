@@ -10,13 +10,14 @@ description: X/Twitter 推文卡片批量生成器。当用户想把推文做成
 ## 依赖与安装
 
 - Node.js ≥ 18
-- 首次使用前在**本 Skill 的安装目录**执行（Puppeteer 会自动下载 Chromium，约 1~2 分钟）：
+- 系统装有 Chrome / Edge / Chromium 之一（绝大多数电脑已满足；渲染直接复用系统浏览器）
+- 首次使用前在**本 Skill 的安装目录**执行（秒级完成，**不下载任何浏览器**）：
 
 ```bash
 cd <skill 安装目录> && npm install
 ```
 
-> `puppeteer` 用于卡片渲染；Chromium 启动失败时自动探测系统 Chrome（macOS / Linux / Windows 均支持）。
+> 渲染使用 `puppeteer-core` + 系统浏览器：安装不下载 Chromium（170MB，国内网络会卡死），启动时自动按「`PUPPETEER_EXECUTABLE_PATH` 环境变量 → 本机 puppeteer 缓存（如有匹配版本）→ 系统路径探测（macOS / Linux / Windows）」的顺序找到浏览器。找不到时会报错并给出上面两条解决路径。
 
 ## 首次设置：网页配置模板（主流程）
 
@@ -116,6 +117,6 @@ bin/perfect-tweet.js   # CLI 入口（config / template / generate / preview）
 lib/render.js          # HTML 生成器（一比一复刻 X 详情页排版）
 lib/config.js          # 模板读写 + 校验（config.json）
 lib/fetch.js           # fxtwitter 抓取（+可选官方 API）
-lib/screenshot.js      # Puppeteer headless 高清截图 + Chrome 回退链
+lib/screenshot.js      # Puppeteer headless 高清截图 + 系统浏览器探测
 assets/verified.png    # X 蓝色认证标
 ```
