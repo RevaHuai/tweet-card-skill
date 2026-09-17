@@ -24,7 +24,7 @@ cd <skill 安装目录> && npm install
 
 1. 提示用户打开 **https://perfect-tweet-a6pm.vercel.app/**
 2. 用户在网页上调整主题、尺寸、字号、背景图等，实时预览
-3. 满意后点击「导出模板」，下载得到一个 JSON 文件
+3. 满意后点右上角的导出按钮（↓ 图标，悬停提示「导出模板 JSON」），下载得到一个 JSON 文件
 4. 导入模板（持久保存，重启不丢）：
 
 ```bash
@@ -34,7 +34,9 @@ perfect-tweet template import <下载的文件.json>
 5. 跑一次 `preview` 生成示例卡片，用 markdown 图片语法展示给用户确认；不满意就回网页调整再导一次
 6. 确认后进入日常使用：用户给链接 → `generate` 批量出图
 
-> 若 `config.json` 不存在（全新安装），CLI 首次运行任一命令也会打印这条引导。
+> 若 `config.json` 不存在（全新安装），CLI 在无参数运行或 `help` 时也会打印这条引导。
+>
+> 模板持久化在 `~/.newmax/skills/perfect-tweet/config.json`（Agent skills 标准安装位置，与当前工作目录无关）；设置环境变量 `PERFECT_TWEET_CONFIG=/path/to/config.json` 可改用自定义路径（多 Agent 实例共享配置时用）。
 
 **备选（用户不想用网页时）**：直接命令行配置——`perfect-tweet config theme=white dimension=16:9`，再 `preview` 确认，逐项微调。
 
