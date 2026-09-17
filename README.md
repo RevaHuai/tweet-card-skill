@@ -16,12 +16,13 @@
 - **背景图模式**：任意图片作背景，卡片变半透明浮层，可调透明度与偏移
 - **数据抓取免凭证**：默认走 fxtwitter 公开 API；配置 Bearer Token 可走 X 官方 API v2（可选增强）
 - **时区自适应**：推文 UTC 时间自动转换到本地时区显示
+- **轻量安装**：不下载 Chromium（170MB），渲染复用系统 Chrome / Edge，`npm install` 秒级完成
 
 ## 环境要求
 
 - Node.js ≥ 18
 - macOS / Linux / Windows
-- Chrome 或 Chromium（Puppeteer 自带下载；若下载受限会自动探测系统 Chrome）
+- 系统装有 Chrome / Edge / Chromium 之一（渲染直接复用系统浏览器，安装过程不下载任何浏览器）
 
 ## 安装
 
@@ -40,7 +41,7 @@ git clone https://github.com/RevaHuai/tweet-card-skill.git ~/.newmax/skills/perf
 
 # 其他 Agent：查阅其文档中的 skills / 插件目录，clone 到同样位置即可
 
-# 安装依赖（Puppeteer 自动下载 Chromium，约 1~2 分钟）
+# 安装依赖（秒级完成，不下载浏览器）
 cd <你的 skills 目录>/perfect-tweet && npm install
 ```
 
@@ -165,14 +166,14 @@ perfect-tweet generate <url> --dim 2:3 --out ~/Desktop     # 临时换尺寸/输
 
 ## 常见问题
 
-**Q：Chromium 启动失败？**
-内置 Chrome 智能回退链：优先用 Puppeteer 自带 Chromium，异常时自动探测系统 Chrome（macOS `/Applications/Google Chrome.app`、Linux `google-chrome`、Windows 常见安装目录）。确保系统装有任一 Chrome 即可。
+**Q：提示未找到可启动的 Chrome/Chromium？**
+本 Skill 不随包下载浏览器，渲染复用系统浏览器。启动时自动按「`PUPPETEER_EXECUTABLE_PATH` 环境变量 → 系统路径（macOS `/Applications/Google Chrome.app`、Linux `google-chrome`、Windows 常见安装目录、Edge/Chromium 均可）」的顺序探测。装一个 Google Chrome（绝大多数电脑已有），或设置 `PUPPETEER_EXECUTABLE_PATH` 指向已有浏览器即可。
 
 **Q：某条推文抓取失败？**
 默认走 fxtwitter 公开 API，只能获取**公开推文**。私密账号、已删除推文拿不到。配置环境变量 `X_API_BEARER_TOKEN` 可走 X 官方 API v2（字段更全），失败自动回退 fxtwitter。
 
-**Q：报 `puppeteer` 模块找不到？**
-先在 Skill 目录执行 `npm install`。
+**Q：报 `puppeteer-core` 模块找不到？**
+先在 Skill 目录执行 `npm install`（秒级完成，不下载浏览器）。
 
 ## 目录结构
 
@@ -188,7 +189,7 @@ tweet-card-skill/            # 仓库根即 Skill 根，clone 到 skills 目录�
 │   ├── render.js            # HTML 生成器（一比一复刻 X 详情页排版）
 │   ├── config.js            # 模板读写 + 校验
 │   ├── fetch.js             # fxtwitter 抓取（+ 可选 X 官方 API）
-│   └── screenshot.js        # Puppeteer headless 高清截图 + Chrome 回退链
+│   └── screenshot.js        # Puppeteer headless 高清截图 + 系统浏览器探测
 └── assets/
     └── verified.png         # X 蓝色认证标
 ```

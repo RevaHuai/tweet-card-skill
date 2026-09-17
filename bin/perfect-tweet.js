@@ -27,7 +27,7 @@ async function getScreenshotBatch() {
         return (await import('../lib/screenshot.js')).screenshotBatch;
     } catch (err) {
         if (err && err.code === 'ERR_MODULE_NOT_FOUND') {
-            throw new Error('缺少依赖 puppeteer。请先在 Skill 目录执行：npm install');
+            throw new Error('缺少依赖（puppeteer-core）。请先在 Skill 目录执行：npm install');
         }
         throw err;
     }
