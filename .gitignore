@@ -1,0 +1,4 @@
+node_modules/
+bun.lock
+config.json
+.DS_Store

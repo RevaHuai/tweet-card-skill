@@ -1,0 +1,20 @@
+{
+    "name": "tweet-card-skill",
+    "version": "1.0.0",
+    "description": "X/Twitter tweet card generator as an Agent Skill — set a template once, batch-generate HD PNG cards from tweet links in any skills-capable Agent",
+    "type": "module",
+    "bin": {
+        "perfect-tweet": "bin/perfect-tweet.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/RevaHuai/tweet-card-skill.git"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "puppeteer": "^23.11.1"
+    },
+    "license": "MIT"
+}
